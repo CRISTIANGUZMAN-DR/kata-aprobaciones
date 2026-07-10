@@ -3,6 +3,7 @@ package com.kata.aprobaciones.domain.model;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.kata.aprobaciones.domain.exception.AccionNoPermitidaException;
 import com.kata.aprobaciones.domain.exception.SolicitanteIgualAprobadorException;
 
 public class Solicitud {
@@ -13,9 +14,9 @@ public class Solicitud {
     private final String solicitante;
     private final String aprobador;
     private final TipoSolicitud tipo;
-    private final EstadoSolicitud estado;
+    private EstadoSolicitud estado;
     private final LocalDateTime creadoEn;
-    private final LocalDateTime actualizadoEn;
+    private LocalDateTime actualizadoEn;
 
     private Solicitud(UUID id, String titulo, String descripcion, String solicitante, String aprobador,
             TipoSolicitud tipo, EstadoSolicitud estado, LocalDateTime creadoEn, LocalDateTime actualizadoEn) {
@@ -80,5 +81,28 @@ public class Solicitud {
 
     public LocalDateTime getActualizadoEn() {
         return actualizadoEn;
+    }
+
+    public void aprobar(String aprobador) throws AccionNoPermitidaException {
+        validarDecision(aprobador);
+        this.estado = EstadoSolicitud.APROBADO;
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    public void rechazar(String aprobador) throws AccionNoPermitidaException {
+        validarDecision(aprobador);
+        this.estado = EstadoSolicitud.RECHAZADO;
+        this.actualizadoEn = LocalDateTime.now();
+    }
+
+    private void validarDecision(String aprobador) throws AccionNoPermitidaException {
+        if (estado != EstadoSolicitud.PENDIENTE) {
+            throw new AccionNoPermitidaException(
+                    "La solicitud " + id + " ya fue " + estado.name().toLowerCase() + ", no se puede modificar");
+        }
+        if (!this.aprobador.equalsIgnoreCase(aprobador)) {
+            throw new AccionNoPermitidaException(
+                    "El usuario " + aprobador + " no es el aprobador asignado a esta solicitud");
+        }
     }
 }
