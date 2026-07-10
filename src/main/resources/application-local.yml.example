@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/aprobaciones
+    username: aprobaciones
+    password: change_me_local_password
