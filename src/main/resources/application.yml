@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: aprobaciones
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:aprobaciones}
+    username: ${DB_USER:aprobaciones}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    com.kata.aprobaciones: INFO
