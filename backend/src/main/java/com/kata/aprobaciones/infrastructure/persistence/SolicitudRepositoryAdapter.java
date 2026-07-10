@@ -1,0 +1,34 @@
+package com.kata.aprobaciones.infrastructure.persistence;
+
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.kata.aprobaciones.domain.model.HistorialCambio;
+import com.kata.aprobaciones.domain.model.Solicitud;
+import com.kata.aprobaciones.domain.port.out.SolicitudRepository;
+import com.kata.aprobaciones.infrastructure.persistence.entity.SolicitudEntity;
+import com.kata.aprobaciones.infrastructure.persistence.mapper.HistorialCambioMapper;
+import com.kata.aprobaciones.infrastructure.persistence.mapper.SolicitudMapper;
+import com.kata.aprobaciones.infrastructure.persistence.repository.HistorialCambioJpaRepository;
+import com.kata.aprobaciones.infrastructure.persistence.repository.SolicitudJpaRepository;
+
+@Component
+public class SolicitudRepositoryAdapter implements SolicitudRepository {
+
+    private final SolicitudJpaRepository solicitudJpaRepository;
+    private final HistorialCambioJpaRepository historialCambioJpaRepository;
+
+    public SolicitudRepositoryAdapter(SolicitudJpaRepository solicitudJpaRepository,
+            HistorialCambioJpaRepository historialCambioJpaRepository) {
+        this.solicitudJpaRepository = solicitudJpaRepository;
+        this.historialCambioJpaRepository = historialCambioJpaRepository;
+    }
+
+    @Override
+    @Transactional
+    public Solicitud guardar(Solicitud solicitud, HistorialCambio historialInicial) {
+        SolicitudEntity solicitudEntity = solicitudJpaRepository.save(SolicitudMapper.toEntity(solicitud));
+        historialCambioJpaRepository.save(HistorialCambioMapper.toEntity(historialInicial));
+        return SolicitudMapper.toDomain(solicitudEntity);
+    }
+}
