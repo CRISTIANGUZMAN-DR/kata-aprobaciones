@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.kata.aprobaciones.domain.exception.AccionNoPermitidaException;
+import com.kata.aprobaciones.domain.exception.NotificacionNotFoundException;
 import com.kata.aprobaciones.domain.exception.SolicitanteIgualAprobadorException;
 import com.kata.aprobaciones.domain.exception.SolicitudNotFoundException;
 
@@ -26,6 +27,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SolicitudNotFoundException.class)
     public ProblemDetail manejarSolicitudNoEncontrada(SolicitudNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(NotificacionNotFoundException.class)
+    public ProblemDetail manejarNotificacionNoEncontrada(NotificacionNotFoundException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
