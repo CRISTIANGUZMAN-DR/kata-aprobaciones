@@ -2,6 +2,7 @@ package com.kata.aprobaciones.infrastructure.web;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,13 +18,18 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kata.aprobaciones.domain.exception.AccionNoPermitidaException;
 import com.kata.aprobaciones.domain.exception.SolicitanteIgualAprobadorException;
+import com.kata.aprobaciones.domain.exception.SolicitudNotFoundException;
 import com.kata.aprobaciones.domain.model.EstadoSolicitud;
 import com.kata.aprobaciones.domain.model.Solicitud;
 import com.kata.aprobaciones.domain.model.TipoSolicitud;
+import com.kata.aprobaciones.domain.port.in.AprobarSolicitudUseCase;
 import com.kata.aprobaciones.domain.port.in.CreateSolicitudUseCase;
+import com.kata.aprobaciones.domain.port.in.RechazarSolicitudUseCase;
 import com.kata.aprobaciones.infrastructure.web.controller.SolicitudController;
 import com.kata.aprobaciones.infrastructure.web.dto.CrearSolicitudRequest;
+import com.kata.aprobaciones.infrastructure.web.dto.DecidirSolicitudRequest;
 
 @WebMvcTest(SolicitudController.class)
 class SolicitudControllerTest {
@@ -37,6 +43,19 @@ class SolicitudControllerTest {
     @MockBean
     private CreateSolicitudUseCase createSolicitudUseCase;
 
+    @MockBean
+    private AprobarSolicitudUseCase aprobarSolicitudUseCase;
+
+    @MockBean
+    private RechazarSolicitudUseCase rechazarSolicitudUseCase;
+
+    private Solicitud solicitudPendiente(UUID id) {
+        return Solicitud.reconstruir(
+                id, "Nueva version microservicio", "Aprobar despliegue de la version 2.3.0",
+                "jperez", "mgarcia", TipoSolicitud.DESPLIEGUE, EstadoSolicitud.PENDIENTE,
+                LocalDateTime.now(), LocalDateTime.now());
+    }
+
     @Test
     void should_retornar201_when_datosValidos() throws Exception {
         CrearSolicitudRequest request = new CrearSolicitudRequest(
@@ -46,18 +65,7 @@ class SolicitudControllerTest {
                 "mgarcia",
                 TipoSolicitud.DESPLIEGUE);
 
-        Solicitud solicitud = Solicitud.reconstruir(
-                UUID.randomUUID(),
-                request.titulo(),
-                request.descripcion(),
-                request.solicitante(),
-                request.aprobador(),
-                request.tipo(),
-                EstadoSolicitud.PENDIENTE,
-                LocalDateTime.now(),
-                LocalDateTime.now());
-
-        when(createSolicitudUseCase.crear(any())).thenReturn(solicitud);
+        when(createSolicitudUseCase.crear(any())).thenReturn(solicitudPendiente(UUID.randomUUID()));
 
         mockMvc.perform(post("/api/solicitudes")
                         .header("X-Usuario", "jperez")
@@ -115,6 +123,53 @@ class SolicitudControllerTest {
 
         mockMvc.perform(post("/api/solicitudes")
                         .header("X-Usuario", "jperez")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void should_retornar200_when_aprobarSolicitudValida() throws Exception {
+        UUID id = UUID.randomUUID();
+        Solicitud aprobada = solicitudPendiente(id);
+        aprobada.aprobar("mgarcia");
+
+        when(aprobarSolicitudUseCase.aprobar(any())).thenReturn(aprobada);
+
+        DecidirSolicitudRequest request = new DecidirSolicitudRequest("mgarcia", "Todo en orden");
+
+        mockMvc.perform(patch("/api/solicitudes/{id}/aprobar", id)
+                        .header("X-Usuario", "mgarcia")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("APROBADO"));
+    }
+
+    @Test
+    void should_retornar404_when_solicitudNoExiste() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(aprobarSolicitudUseCase.aprobar(any())).thenThrow(new SolicitudNotFoundException(id));
+
+        DecidirSolicitudRequest request = new DecidirSolicitudRequest("mgarcia", null);
+
+        mockMvc.perform(patch("/api/solicitudes/{id}/aprobar", id)
+                        .header("X-Usuario", "mgarcia")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void should_retornar409_when_usuarioNoEsElAprobador() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(rechazarSolicitudUseCase.rechazar(any()))
+                .thenThrow(new AccionNoPermitidaException("El usuario alopez no es el aprobador asignado"));
+
+        DecidirSolicitudRequest request = new DecidirSolicitudRequest("alopez", "No corresponde");
+
+        mockMvc.perform(patch("/api/solicitudes/{id}/rechazar", id)
+                        .header("X-Usuario", "alopez")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict());
