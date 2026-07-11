@@ -1,0 +1,228 @@
+{
+  "info": {
+    "name": "Kata Aprobaciones",
+    "description": "Flujo Genérico de Aprobación — colección completa de la API (backend).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "solicitudId",
+      "value": ""
+    },
+    {
+      "key": "notificacionId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Solicitudes",
+      "item": [
+        {
+          "name": "Crear solicitud",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Usuario", "value": "jperez" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Nueva version microservicio\",\n  \"descripcion\": \"Aprobar despliegue de la version 2.3.0\",\n  \"solicitante\": \"jperez\",\n  \"aprobador\": \"mgarcia\",\n  \"tipo\": \"DESPLIEGUE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Crear solicitud - solicitante igual a aprobador (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Usuario", "value": "jperez" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Nueva version microservicio\",\n  \"descripcion\": \"Aprobar despliegue de la version 2.3.0\",\n  \"solicitante\": \"jperez\",\n  \"aprobador\": \"jperez\",\n  \"tipo\": \"DESPLIEGUE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Crear solicitud - campo requerido faltante (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Usuario", "value": "jperez" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"\",\n  \"descripcion\": \"Aprobar despliegue de la version 2.3.0\",\n  \"solicitante\": \"jperez\",\n  \"aprobador\": \"mgarcia\",\n  \"tipo\": \"DESPLIEGUE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Listar solicitudes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Usuario", "value": "mgarcia" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes?aprobador=mgarcia&estado=PENDIENTE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes"],
+              "query": [
+                { "key": "aprobador", "value": "mgarcia" },
+                { "key": "estado", "value": "PENDIENTE" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener detalle + historial",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Usuario", "value": "mgarcia" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes/{{solicitudId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes", "{{solicitudId}}"]
+            }
+          }
+        },
+        {
+          "name": "Obtener solicitud inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Usuario", "value": "mgarcia" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes", "00000000-0000-0000-0000-000000000000"]
+            }
+          }
+        },
+        {
+          "name": "Aprobar solicitud",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "X-Usuario", "value": "mgarcia" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes/{{solicitudId}}/aprobar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes", "{{solicitudId}}", "aprobar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aprobador\": \"mgarcia\",\n  \"comentario\": \"Todo en orden, se aprueba\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Rechazar solicitud",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "X-Usuario", "value": "mgarcia" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes/{{solicitudId}}/rechazar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes", "{{solicitudId}}", "rechazar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aprobador\": \"mgarcia\",\n  \"comentario\": \"No cumple con las politicas actuales\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Aprobar - usuario distinto al aprobador (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "X-Usuario", "value": "alopez" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/solicitudes/{{solicitudId}}/aprobar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "solicitudes", "{{solicitudId}}", "aprobar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aprobador\": \"alopez\",\n  \"comentario\": \"No me corresponde\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notificaciones",
+      "item": [
+        {
+          "name": "Bandeja de entrada del aprobador",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Usuario", "value": "mgarcia" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/notificaciones/mgarcia",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notificaciones", "mgarcia"]
+            }
+          }
+        },
+        {
+          "name": "Marcar notificacion como leida",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "X-Usuario", "value": "mgarcia" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/notificaciones/{{notificacionId}}/leer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notificaciones", "{{notificacionId}}", "leer"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalogo",
+      "item": [
+        {
+          "name": "Listar tipos de solicitud",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Usuario", "value": "jperez" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/catalogo/tipos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "catalogo", "tipos"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
