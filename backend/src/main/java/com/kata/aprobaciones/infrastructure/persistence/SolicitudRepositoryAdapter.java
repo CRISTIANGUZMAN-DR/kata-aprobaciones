@@ -1,5 +1,8 @@
 package com.kata.aprobaciones.infrastructure.persistence;
 
+import java.util.Optional;
+import java.util.UUID;
+
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,5 +33,18 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
         SolicitudEntity solicitudEntity = solicitudJpaRepository.save(SolicitudMapper.toEntity(solicitud));
         historialCambioJpaRepository.save(HistorialCambioMapper.toEntity(historialInicial));
         return SolicitudMapper.toDomain(solicitudEntity);
+    }
+
+    @Override
+    @Transactional
+    public Solicitud actualizar(Solicitud solicitud, HistorialCambio historialCambio) {
+        SolicitudEntity solicitudEntity = solicitudJpaRepository.save(SolicitudMapper.toEntity(solicitud));
+        historialCambioJpaRepository.save(HistorialCambioMapper.toEntity(historialCambio));
+        return SolicitudMapper.toDomain(solicitudEntity);
+    }
+
+    @Override
+    public Optional<Solicitud> buscarPorId(UUID id) {
+        return solicitudJpaRepository.findById(id).map(SolicitudMapper::toDomain);
     }
 }
