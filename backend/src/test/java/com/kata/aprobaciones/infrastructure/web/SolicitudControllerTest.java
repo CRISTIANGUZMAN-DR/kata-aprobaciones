@@ -1,13 +1,17 @@
 package com.kata.aprobaciones.infrastructure.web;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -22,11 +26,15 @@ import com.kata.aprobaciones.domain.exception.AccionNoPermitidaException;
 import com.kata.aprobaciones.domain.exception.SolicitanteIgualAprobadorException;
 import com.kata.aprobaciones.domain.exception.SolicitudNotFoundException;
 import com.kata.aprobaciones.domain.model.EstadoSolicitud;
+import com.kata.aprobaciones.domain.model.HistorialCambio;
 import com.kata.aprobaciones.domain.model.Solicitud;
 import com.kata.aprobaciones.domain.model.TipoSolicitud;
 import com.kata.aprobaciones.domain.port.in.AprobarSolicitudUseCase;
 import com.kata.aprobaciones.domain.port.in.CreateSolicitudUseCase;
+import com.kata.aprobaciones.domain.port.in.GetSolicitudUseCase;
+import com.kata.aprobaciones.domain.port.in.ListarSolicitudesUseCase;
 import com.kata.aprobaciones.domain.port.in.RechazarSolicitudUseCase;
+import com.kata.aprobaciones.domain.port.in.SolicitudDetalle;
 import com.kata.aprobaciones.infrastructure.web.controller.SolicitudController;
 import com.kata.aprobaciones.infrastructure.web.dto.CrearSolicitudRequest;
 import com.kata.aprobaciones.infrastructure.web.dto.DecidirSolicitudRequest;
@@ -48,6 +56,12 @@ class SolicitudControllerTest {
 
     @MockBean
     private RechazarSolicitudUseCase rechazarSolicitudUseCase;
+
+    @MockBean
+    private ListarSolicitudesUseCase listarSolicitudesUseCase;
+
+    @MockBean
+    private GetSolicitudUseCase getSolicitudUseCase;
 
     private Solicitud solicitudPendiente(UUID id) {
         return Solicitud.reconstruir(
@@ -173,5 +187,42 @@ class SolicitudControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void should_retornar200ConLista_when_seListanSolicitudes() throws Exception {
+        when(listarSolicitudesUseCase.listar(eq("mgarcia"), isNull()))
+                .thenReturn(List.of(solicitudPendiente(UUID.randomUUID())));
+
+        mockMvc.perform(get("/api/solicitudes")
+                        .header("X-Usuario", "mgarcia")
+                        .param("aprobador", "mgarcia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].aprobador").value("mgarcia"));
+    }
+
+    @Test
+    void should_retornar200ConDetalle_when_solicitudExiste() throws Exception {
+        UUID id = UUID.randomUUID();
+        Solicitud solicitud = solicitudPendiente(id);
+        HistorialCambio historial = HistorialCambio.registrar(id, EstadoSolicitud.PENDIENTE, null, "jperez");
+
+        when(getSolicitudUseCase.obtener(id)).thenReturn(new SolicitudDetalle(solicitud, List.of(historial)));
+
+        mockMvc.perform(get("/api/solicitudes/{id}", id)
+                        .header("X-Usuario", "mgarcia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.historial", org.hamcrest.Matchers.hasSize(1)));
+    }
+
+    @Test
+    void should_retornar404_when_seConsultaSolicitudInexistente() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(getSolicitudUseCase.obtener(id)).thenThrow(new SolicitudNotFoundException(id));
+
+        mockMvc.perform(get("/api/solicitudes/{id}", id)
+                        .header("X-Usuario", "mgarcia"))
+                .andExpect(status().isNotFound());
     }
 }

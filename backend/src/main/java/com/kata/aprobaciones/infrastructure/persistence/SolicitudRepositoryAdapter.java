@@ -1,11 +1,13 @@
 package com.kata.aprobaciones.infrastructure.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kata.aprobaciones.domain.model.EstadoSolicitud;
 import com.kata.aprobaciones.domain.model.HistorialCambio;
 import com.kata.aprobaciones.domain.model.Solicitud;
 import com.kata.aprobaciones.domain.port.out.SolicitudRepository;
@@ -46,5 +48,20 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
     @Override
     public Optional<Solicitud> buscarPorId(UUID id) {
         return solicitudJpaRepository.findById(id).map(SolicitudMapper::toDomain);
+    }
+
+    @Override
+    public List<Solicitud> listar(String aprobador, EstadoSolicitud estado) {
+        List<SolicitudEntity> entidades;
+        if (aprobador != null && estado != null) {
+            entidades = solicitudJpaRepository.findByAprobadorAndEstado(aprobador, estado);
+        } else if (aprobador != null) {
+            entidades = solicitudJpaRepository.findByAprobador(aprobador);
+        } else if (estado != null) {
+            entidades = solicitudJpaRepository.findByEstado(estado);
+        } else {
+            entidades = solicitudJpaRepository.findAll();
+        }
+        return entidades.stream().map(SolicitudMapper::toDomain).toList();
     }
 }
