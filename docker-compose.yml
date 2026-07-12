@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: kata-aprobaciones-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-aprobaciones}
+      POSTGRES_USER: ${DB_USER:-aprobaciones}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD, copia .env.example a .env}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - kata-aprobaciones-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-aprobaciones}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  kata-aprobaciones-data:
