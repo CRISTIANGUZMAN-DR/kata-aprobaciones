@@ -4,7 +4,7 @@ import Layout from './components/Layout'
 import CrearSolicitud from './pages/CrearSolicitud'
 import ListarSolicitudes from './pages/ListarSolicitudes'
 import DetalleSolicitud from './pages/DetalleSolicitud'
-import Placeholder from './pages/Placeholder'
+import Notificaciones from './pages/Notificaciones'
 
 export default function App() {
   return (
@@ -15,7 +15,7 @@ export default function App() {
             <Route index element={<CrearSolicitud />} />
             <Route path="solicitudes" element={<ListarSolicitudes />} />
             <Route path="solicitudes/:id" element={<DetalleSolicitud />} />
-            <Route path="notificaciones" element={<Placeholder titulo="Notificaciones" />} />
+            <Route path="notificaciones" element={<Notificaciones />} />
           </Route>
         </Routes>
       </BrowserRouter>
