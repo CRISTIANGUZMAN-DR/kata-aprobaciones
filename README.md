@@ -25,7 +25,7 @@ Proyecto desarrollado como solución a un reto técnico (kata) de backend/cloud:
 | Frontend | React (JavaScript) + Vite + Tailwind CSS — selector de usuario simulado (sin auth real, mismo criterio que `X-Usuario`) |
 | Build | Maven (backend) / npm (frontend) |
 | DB local | Docker Compose (PostgreSQL) |
-| CI/CD | GitHub Actions (build + tests en cada push/PR a `main` o `develop`) |
+| CI/CD | GitHub Actions — CI: build + tests en cada push/PR a `main` o `develop`. CD: deploy automático a EC2 en cada push a `main` |
 
 ## Arquitectura
 
@@ -127,9 +127,10 @@ Estructura del repo:
 
 ```
 kata-aprobaciones/
-├── backend/     ← API Spring Boot (Java 17, Maven)
-├── frontend/    ← SPA React + Vite + Tailwind
-├── docker-compose.yml
+├── backend/                  ← API Spring Boot (Java 17, Maven) + Dockerfile
+├── frontend/                 ← SPA React + Vite + Tailwind + Dockerfile + nginx.conf
+├── docker-compose.yml        ← solo Postgres, para desarrollo local
+├── docker-compose.prod.yml   ← postgres + backend + frontend, para el deploy en AWS
 ├── postman/
 └── README.md
 ```
@@ -203,11 +204,76 @@ La colección está en [`postman/kata-aprobaciones.postman_collection.json`](pos
 
 ## Pruebas en la nube (AWS)
 
-> ⏳ **Pendiente** — el deploy a AWS todavía no se hizo (backend y frontend se están terminando primero). Esta sección se completa apenas la app quede corriendo en EC2.
+> ⏳ **Pendiente** — la infraestructura de deploy (Dockerfiles, `docker-compose.prod.yml`, workflow de CD) ya está lista; falta levantar la EC2. Esta sección se completa apenas la app quede corriendo ahí.
 
-- **Frontend**: `<URL pendiente>`
-- **Backend / API**: `<URL pendiente>`
+- **App (frontend + API vía proxy)**: `<URL pendiente>`
 - **Swagger**: `<URL pendiente>/swagger-ui/index.html`
+
+### Arquitectura de despliegue
+
+Una sola EC2 con Docker Compose corriendo 3 contenedores: `postgres` (sin puerto expuesto, solo red interna), `backend` (Spring Boot, puerto interno 8080) y `frontend` (Nginx, puerto 80 público) que sirve el build de React y proxea `/api` al backend — todo same-origin, sin CORS.
+
+```mermaid
+graph LR
+    Internet -->|puerto 80| Nginx
+    Nginx -->|estático| ReactBuild[Build de React]
+    Nginx -->|"/api/*"| Backend[Backend Spring Boot]
+    Backend --> Postgres[(PostgreSQL)]
+```
+
+### Checklist de infraestructura (una sola vez)
+
+**1. Lanzar la EC2**
+- Instancia Free Tier: `t2.micro` o `t3.micro`, Ubuntu 22.04
+- Asignar una **Elastic IP** (para que la IP no cambie si la instancia se reinicia)
+- Security Group: puerto **80** abierto al público, puerto **22** restringido a la IP de quien administra
+- Descargar el `.pem` (llave SSH) al crearla
+
+**2. Preparar el servidor** (por SSH, una sola vez)
+
+```bash
+# Actualizar sistema
+sudo apt update && sudo apt upgrade -y
+
+# Instalar Docker
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+# cerrar la sesión SSH y volver a entrar para que el grupo tome efecto
+
+# Hardening basico: parches de seguridad automaticos + proteccion contra fuerza bruta en SSH
+sudo apt install -y unattended-upgrades fail2ban
+sudo dpkg-reconfigure -plow unattended-upgrades
+sudo systemctl enable --now fail2ban
+```
+
+**3. Clonar el repo y configurar el `.env`**
+
+```bash
+git clone https://github.com/CRISTIANGUZMAN-DR/kata-aprobaciones.git ~/kata-aprobaciones
+cd ~/kata-aprobaciones
+cp .env.example .env
+nano .env   # poner un DB_PASSWORD real, este archivo nunca se commitea
+```
+
+**4. Primer deploy manual**
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+La app queda disponible en `http://<IP-de-la-EC2>`.
+
+**5. Cargar los secrets en GitHub** (Settings → Secrets and variables → Actions del repo)
+
+| Secret | Valor |
+|---|---|
+| `EC2_HOST` | IP pública (Elastic IP) de la instancia |
+| `EC2_USER` | usuario SSH (`ubuntu` en Ubuntu) |
+| `EC2_SSH_KEY` | contenido completo del `.pem` |
+
+### Cómo queda el flujo después de esto
+
+De ahí en adelante es automático: cada merge a `main` dispara el workflow [`cd.yml`](.github/workflows/cd.yml), que se conecta por SSH a la EC2, hace `git pull` y `docker compose -f docker-compose.prod.yml up -d --build`. No hace falta tocar nada manualmente después del setup inicial.
 
 ## Usuarios de prueba
 
@@ -229,3 +295,5 @@ Dado el tiempo acotado del reto, quedaron fuera de alcance a propósito (no por 
 
 - **Sin capa de API Gateway / BFF**: el frontend le habla directo al backend Spring Boot — no hay una capa intermedia que agregue requests, centralice rate limiting o desacople el contrato del front del contrato interno del backend. Para el tamaño de este kata no se justifica; en un sistema real con más de un cliente o más de un servicio backend, sí tendría sentido agregarla.
 - **`X-Usuario` es simulado, no autenticación real**: no hay JWT ni validación de identidad — cualquiera puede mandar cualquier usuario en el header. Suficiente para el alcance del kata (que explícitamente no pide auth real), pero no es un patrón productivo.
+- **Sin HTTPS**: el deploy usa la IP pública de la EC2 directo, sin dominio — Let's Encrypt no emite certificados para IPs. Para una demo de un par de semanas no se justifica comprar un dominio.
+- **CD por SSH directo a la EC2, sin registry de imágenes**: el workflow hace `git pull` + `docker compose build` en la propia instancia, en vez de construir la imagen en CI y publicarla en un registry (ECR/Docker Hub). Es más simple para una sola instancia y evita pagar/configurar un registry, a costa de que el puerto 22 tenga que aceptar conexiones desde las IPs (dinámicas) de los runners de GitHub Actions, además del acceso administrativo restringido a IPs conocidas.
