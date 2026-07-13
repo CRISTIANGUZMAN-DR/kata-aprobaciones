@@ -209,6 +209,8 @@ La app está desplegada y corriendo en una EC2 de AWS Free Tier:
 - **App (frontend + API vía proxy)**: http://16.59.30.169
 - **Swagger**: http://16.59.30.169/swagger-ui/index.html
 
+> ⚠️ **Nota**: mientras el workflow de CD está desplegando (`docker compose build` reconstruyendo las imágenes), la app puede responder lenta o tardar en cargar — la `t3.micro` del Free Tier comparte su única CPU entre el build y los contenedores que ya están sirviendo. Es esperado y temporal; una vez que el deploy termina, vuelve a responder normal. Los datos no se pierden en ningún momento porque Postgres corre con un volumen persistente que el deploy nunca toca.
+
 ### Arquitectura de despliegue
 
 Una sola EC2 con Docker Compose corriendo 3 contenedores: `postgres` (sin puerto expuesto, solo red interna), `backend` (Spring Boot, puerto interno 8080) y `frontend` (Nginx, puerto 80 público) que sirve el build de React y proxea `/api` al backend — todo same-origin, sin CORS.
@@ -262,6 +264,8 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 La app queda disponible en `http://<IP-de-la-EC2>`.
+
+> 🔧 **Troubleshooting**: si `git pull` falla con `Error in the HTTP2 framing layer`, es un problema conocido de red intermitente entre la EC2 y GitHub. Se arregla una sola vez con `git config http.version HTTP/1.1` dentro de `~/kata-aprobaciones`.
 
 **5. Cargar los secrets en GitHub** (Settings → Secrets and variables → Actions del repo)
 
