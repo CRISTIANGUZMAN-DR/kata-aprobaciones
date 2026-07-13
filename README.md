@@ -2,7 +2,7 @@
 
 Proyecto desarrollado como solución a un reto técnico (kata) de backend/cloud: aplicación web que centraliza flujos genéricos de aprobación — despliegue de microservicios, acceso a herramientas internas, cambios técnicos e incorporación de nuevas herramientas al catálogo. Permite crear solicitudes, notificar al aprobador, aprobar/rechazar con comentarios y mantener el histórico completo de decisiones.
 
-> **Estado actual**: backend y frontend están completos. El backend expone una **API RESTful** (JSON sobre HTTP, ver sección [API](#api)) que se puede probar entera con Postman o Swagger sin necesidad de frontend. El frontend (React + Vite) cubre los 5 requisitos funcionales del kata de punta a punta. Lo único pendiente es el despliegue a AWS (ver [Pruebas en la nube](#pruebas-en-la-nube-aws)).
+> **Estado actual**: backend y frontend están completos y desplegados en AWS (ver [Pruebas en la nube](#pruebas-en-la-nube-aws)). El backend expone una **API RESTful** (JSON sobre HTTP, ver sección [API](#api)) que se puede probar entera con Postman o Swagger sin necesidad de frontend. El frontend (React + Vite) cubre los 5 requisitos funcionales del kata de punta a punta.
 
 ## Funcionalidad
 
@@ -204,10 +204,10 @@ La colección está en [`postman/kata-aprobaciones.postman_collection.json`](pos
 
 ## Pruebas en la nube (AWS)
 
-> ⏳ **Pendiente** — la infraestructura de deploy (Dockerfiles, `docker-compose.prod.yml`, workflow de CD) ya está lista; falta levantar la EC2. Esta sección se completa apenas la app quede corriendo ahí.
+La app está desplegada y corriendo en una EC2 de AWS Free Tier:
 
-- **App (frontend + API vía proxy)**: `<URL pendiente>`
-- **Swagger**: `<URL pendiente>/swagger-ui/index.html`
+- **App (frontend + API vía proxy)**: http://16.59.30.169
+- **Swagger**: http://16.59.30.169/swagger-ui/index.html
 
 ### Arquitectura de despliegue
 
