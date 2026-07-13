@@ -16,6 +16,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 30m
           script: |
+            set -e
             cd ~/kata-aprobaciones
             git pull origin main
             docker compose -f docker-compose.prod.yml up -d --build
